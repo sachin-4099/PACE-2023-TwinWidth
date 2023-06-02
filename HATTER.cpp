@@ -577,7 +577,8 @@ void initialize_values(Graph* G) {
 	unordered_set<int> initialCntTenNodeValue = {153746, 169422};
 	unordered_set<int> initialCntFourNodeValue = {189859, 265009}; 
 	unordered_set<int> twwNeighNodeValue = {131072, 926552, 2216688, 2665215, 3598623};
-	unordered_set<int> randomExtremeFalseNodeValue = {310870, 320287};
+	// unordered_set<int> randomExtremeFalseNodeValue = {310870, 320287};
+	int randomExtremeFalseLo = 265009, randomExtremeFalseHi = 320287;
 
 	int n = G->n;
 	if(localFuncNodeValue.count(n)) CONTRACTING_COST_FUNCTION = LOCAL;
@@ -594,7 +595,7 @@ void initialize_values(Graph* G) {
 	else INITIAL_CNT = 2;
 	
     if(CONTRACTING_COST_FUNCTION == LOCAL) INITIAL_CNT = 10;
-	if(randomExtremeFalseNodeValue.count(n)) RANDOM_EXTREME = false;
+	if(randomExtremeFalseLo < n && n <= randomExtremeFalseHi) RANDOM_EXTREME = false;
 	if(initialCntFourNodeValue.count(n)) INITIAL_CNT = 4;
 	if(initialCntTenNodeValue.count(n)) INITIAL_CNT = 10;
 
@@ -684,11 +685,11 @@ int main() {
 	action.sa_handler = term;
 	sigaction(SIGTERM, &action, NULL);
 
-	//struct sigaction alarm_action;
-	//memset(&alarm_action, 0, sizeof(struct sigaction));
-	//alarm_action.sa_handler = alarm_handler;
-	//sigaction(SIGALRM, &alarm_action, NULL);
-	//alarm(300);
+	/*struct sigaction alarm_action;
+	memset(&alarm_action, 0, sizeof(struct sigaction));
+	alarm_action.sa_handler = alarm_handler;
+	sigaction(SIGALRM, &alarm_action, NULL);
+	alarm(300);*/
 
 	srand(time(0));
 	Graph* G = read_graph();
