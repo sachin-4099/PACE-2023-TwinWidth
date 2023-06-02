@@ -2,9 +2,9 @@
 
 This repository contains a **heuristic solution** to the Twinwidth problem.
 
-The program is submitted to the [PACE Challenge 2023](https://pacechallenge.org/2023/) in the **heuristic track**.
+The program is submitted as part of [PACE Challenge 2023](https://pacechallenge.org/2023/) in the **heuristic track**.
 
-The **Directed Feedback Vertex Set** problem is defined as follows:
+The **TWINWIDTH** problem is defined as follows:
 
 **Input**: An undirected graph $G = (V, E)$
 
