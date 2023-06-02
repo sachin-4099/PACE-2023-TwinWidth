@@ -23,5 +23,3 @@ g++ -std=c++14 -O2 hatter.cpp -o hatter
 cat input_graph.gr | ./hatter > twinwidth.txt
 ```
 By default, the solver runs till it receives a `SIGTERM`.
-
-## Description
