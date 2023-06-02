@@ -11,7 +11,7 @@ The whole program is contained in a single C++ file with no dependencies beyond 
 You can use it as follows:
 
 ```
-g++ -O2 hatter.cpp -o hatter
+g++ -std=c++14 -O2 hatter.cpp -o hatter
 cat input_graph.gr | ./hatter > twinwidth.txt
 ```
 By default, the solver runs till it receives a `SIGTERM`.
