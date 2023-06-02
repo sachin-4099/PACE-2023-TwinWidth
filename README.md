@@ -1,8 +1,16 @@
-# HATTER: TwinWidth PACE 2023 (Heuristic Track)
+# HATTER: Hybrid Aprroach for Twinwidth by Taming Red (PACE 2023)
 
 This repository contains a **heuristic solution** to the Twinwidth problem.
 
 The program is submitted to the [PACE Challenge 2023](https://pacechallenge.org/2023/) in the **heuristic track**.
+
+The **Directed Feedback Vertex Set** problem is defined as follows:
+
+**Input**: An undirected graph $G = (V, E)$
+
+**Output**: A contraction sequence that contracts $G$ to a single vertex.
+
+**Width**: The width of the contraction sequence.
 
 ## Compilation & Usage
 
