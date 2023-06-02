@@ -684,11 +684,11 @@ int main() {
 	action.sa_handler = term;
 	sigaction(SIGTERM, &action, NULL);
 
-	struct sigaction alarm_action;
-	memset(&alarm_action, 0, sizeof(struct sigaction));
-	alarm_action.sa_handler = alarm_handler;
-	sigaction(SIGALRM, &alarm_action, NULL);
-	alarm(300);
+	//struct sigaction alarm_action;
+	//memset(&alarm_action, 0, sizeof(struct sigaction));
+	//alarm_action.sa_handler = alarm_handler;
+	//sigaction(SIGALRM, &alarm_action, NULL);
+	//alarm(300);
 
 	srand(time(0));
 	Graph* G = read_graph();
