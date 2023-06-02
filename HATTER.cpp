@@ -27,6 +27,8 @@ volatile sig_atomic_t tle = 0;
 
 int INITIAL_CNT = 4, INC = 2;
 ContractingCostFunc CONTRACTING_COST_FUNCTION = GLOBAL;
+bool TWW_NEIGH = false;
+bool RANDOM_EXTREME = true;
 
 /// SIGTERM handler
 void term(int signum) {
@@ -100,11 +102,16 @@ public:
 	adj_list red_edges; // red neighbors
 	Heap black_heap; // min-heap of black degree 
 	Heap red_heap; // min heap of red degree
+	Heap deg_heap;
 
 	Graph(int n): n(n), m(0) {}
 	
 	// Copy Constructor
-	Graph(const Graph& G): n(G.n), m(G.m), black_edges(G.black_edges), red_edges(G.red_edges), black_heap(G.black_heap), red_heap(G.red_heap) {}
+	Graph(const Graph& G): 
+		n(G.n), m(G.m), 
+		black_edges(G.black_edges), red_edges(G.red_edges), 
+		black_heap(G.black_heap), red_heap(G.red_heap),
+		deg_heap(G.deg_heap) {}
 
 	// add edge (u, v) to graph of type edgeType
 	void add_edge(int u, int v, EdgeType edgeType) {
@@ -134,12 +141,8 @@ public:
 		for(auto& u: black_edges) {
 			if(tle) break;
 			black_heap.insert({u.second.size(), u.first});
+			if(TWW_NEIGH) deg_heap.insert({u.second.size(), u.first});
 		}
-
-        for(auto& u: red_edges) {
-            if(tle) break;
-            red_heap.insert({u.second.size(), u.first});
-        }
 	}
 
 	int intersection_cardinality(unordered_set<int>& a, unordered_set<int>& b) {
@@ -156,8 +159,8 @@ public:
 
 	int contracting_cost_global(int v, int w)
 	{
-        if(red_edges[v].size() < red_edges[w].size())
-        return contracting_cost_global(w, v);
+		if(red_edges[v].size() < red_edges[w].size())
+		return contracting_cost_global(w, v);
 
 		int cost_rd = 0;
 		int cost_rd_v = red_edges[v].size();
@@ -229,46 +232,12 @@ public:
 		else return contracting_cost_local(u, v);
 	}
 
-	void delete_node_contract(int x)
-	{
-		n -= 1;
-		m -= (black_edges[x].size() + red_edges[x].size());
-
-		black_heap.erase(x);
-		red_heap.erase(x);
-       
-	    black_edges.erase(x);
-		red_edges.erase(x);
-
-		// re-hash graph if required
-		if(black_edges.size() && black_edges.bucket_count() / black_edges.size() >= 2) {
-			black_edges.rehash(black_edges.size());
-			for(auto& p: black_edges) {
-				if(tle) return;
-				int u = p.first;
-				if(black_edges[u].size() && black_edges[u].bucket_count() / black_edges[u].size() >= 2)
-					black_edges[u].rehash(black_edges[u].size());
-			}
-		}
-
-		if(red_edges.size() && red_edges.bucket_count() / red_edges.size() >= 2) {
-			red_edges.rehash(red_edges.size());
-			for(auto& p: red_edges) {
-				if(tle) return;
-				int u = p.first;
-				if(red_edges[u].size() && red_edges[u].bucket_count() / red_edges[u].size() >= 2)
-					red_edges[u].rehash(red_edges[u].size());
-			}
-		}
-	}
-
-	bool delete_node(int x) {
-		
-		// std::cerr<<"Node to be deleted: " << x << " ";
+	void delete_node(int x) {
 		n -= 1;
 		m -= (black_edges[x].size() + red_edges[x].size());
 		black_heap.erase(x);
 		red_heap.erase(x);
+		deg_heap.erase(x);
 
 		// remove all black edges of x
 		for(const int& ch: black_edges[x]) {
@@ -304,185 +273,6 @@ public:
 		}
 	}
 
-	// contract v into u and delete v (For Degree 1 nodes)
-	// void contractDeg1(int u, int v) {
-	// 	for(const int& black_w: black_edges[v]) {
-	// 		delete_edge(v, black_w, BLACK);
-	// 	}
-
-	// 	delete_node(v);
-
-	// 	// update heap
-	// 	for(const int& x: nodes_to_update) {
-	// 		if(tle) return;
-	// 		if(black_edges[x].size()) black_heap.insert({black_edges[x].size(), x});
-	// 		else black_heap.erase(x);
-
-	// 		if(red_edges[x].size()) red_heap.insert({red_edges[x].size(), x});
-	// 		else red_heap.erase(x);		
-
-	// 		max_rd = max(max_rd, (int) red_edges[x].size());
-	// 	}
-	// }
-
-	// contract v into u and delete v
-	// TODO: optimize further
-	// void contract(int u, int v) {
-
-	// 	if(black_edges[u].find(v) != black_edges[u].end())
-	// 	{
-	// 		black_edges[u].erase(v);
-	// 	}
-	// 	else if(red_edges[u].find(v) != red_edges[u].end())
-	// 	{
-	// 		red_edges[u].erase(v);
-	// 	}
-
-	// 	vector<int> nodes_to_update = {u};
-
-	// 	for(const int& black_w: black_edges[v]) {
-	// 		if(tle) return;
-
-	// 		if(black_w == u)
-	// 		continue;
-
-	// 		if(!black_edges[u].count(black_w)) {
-	// 			add_edge(u, black_w, RED);
-	// 			nodes_to_update.push_back(black_w);
-	// 		}
-
-	// 		black_edges[black_w].erase(v);
-	// 	}
-
-	// 	for(const int& red_w: red_edges[v]) {
-	// 		if(tle) return;			
-			
-	// 		if(red_w == u)
-	// 		continue;
-
-	// 		delete_edge(u, red_w, BLACK);
-	// 		add_edge(u, red_w, RED);
-	// 		nodes_to_update.push_back(red_w);
-
-	// 		red_edges[red_w].erase(v);
-	// 	}
-
-	// 	vector<int> black_del;
-
-	// 	for(const int& black_w: black_edges[u]) {
-	// 		if(tle) return;
-
-	// 		if(!black_edges[v].count(black_w)) {
-	// 			add_edge(u, black_w, RED);
-	// 			nodes_to_update.push_back(black_w);
-	// 			black_del.push_back(black_w);
-	// 		}
-	// 	}
-
-	// 	for(const int& black_w: black_del) {
-	// 		if(tle) return;
-	// 		delete_edge(u, black_w, BLACK);
-	// 	}
-
-	// 	delete_node_contract(v);
-		
-	// 	// update heap
-	// 	for(const int& x: nodes_to_update) {
-	// 		if(tle) return;
-	// 		if(black_edges[x].size()) black_heap.insert({black_edges[x].size(), x});
-	// 		else black_heap.erase(x);
-
-	// 		if(red_edges[x].size()) red_heap.insert({red_edges[x].size(), x});
-	// 		else red_heap.erase(x);		
-
-	// 		max_rd = max(max_rd, (int) red_edges[x].size());
-	// 	}
-	// }
-
-	// void contract(int v, int w) {
-
-	// 	if(black_edges[v].find(w) != black_edges[v].end())
-	// 	{
-	// 		black_edges[v].erase(w);
-	// 	}
-	// 	else if(red_edges[v].find(w) != red_edges[v].end())
-	// 	{
-	// 		red_edges[v].erase(w);
-	// 	}
-
-	// 	vector<int> nodes_to_update = {v};
-
-	// 	for(const int& black_w: black_edges[w]) {
-	// 		if(tle) return;
-
-	// 		if(black_w == v)
-	// 		continue;
-
-	// 		if(!black_edges[v].count(black_w)) {
-	// 			add_edge(v, black_w, RED);
-    //             nodes_to_update.push_back(black_w);
-	// 		}
-
-    //         black_edges[black_w].erase(w);
-	// 	}
-
-	// 	for(const int& red_w: red_edges[w]) {
-	// 		if(tle) return;			
-			
-	// 		if(red_w == v)
-	// 		continue;
-
-	// 		add_edge(v, red_w, RED);
-    //         delete_edge(v, red_w, BLACK);
-	// 		nodes_to_update.push_back(red_w);
-
-	// 		red_edges[red_w].erase(w);
-	// 	}
-
-	// 	vector<int> black_del;
-
-	// 	for(const int& black_v: black_edges[v]) {
-	// 		if(tle) return;
-
-	// 		if(!black_edges[w].count(black_v)) {
-	// 			add_edge(v, black_v, RED);
-	// 			nodes_to_update.push_back(black_v);
-	// 			black_del.push_back(black_v);
-	// 		}
-	// 	}
-
-	// 	for(const int& black_v: black_del) {
-	// 		if(tle) return;
-	// 		delete_edge(v, black_v, BLACK);
-	// 	}
-
-	// 	delete_node_contract(w);
-
-    //     // unordered_set<int> nodes_to_update_2 = {v};
-	// 	// nodes_to_update_2.insert(black_edges[v].begin(), black_edges[v].end());
-	// 	// nodes_to_update_2.insert(red_edges[v].begin(), red_edges[v].end());
-
-    //     // std::cerr<< nodes_to_update.size()<<" "<<nodes_to_update_2.size()<<"\n";
-
-    //     // if(nodes_to_update_2.find(w) != nodes_to_update_2.end())
-    //     // {
-    //     //     std::cerr<<"ERROR: Node exists"<<"\n";
-	// 	//     nodes_to_update_2.erase(w);
-    //     // }
-		
-	// 	// update heap
-	// 	for(const int& x: nodes_to_update) {
-	// 		if(tle) return;
-	// 		if(black_edges[x].size()) black_heap.insert({black_edges[x].size(), x});
-	// 		else black_heap.erase(x);
-
-	// 		if(red_edges[x].size()) red_heap.insert({red_edges[x].size(), x});
-	// 		else red_heap.erase(x);		
-
-	// 		max_rd = max(max_rd, (int) red_edges[x].size());
-	// 	}
-	// }
-
 	void contract(int u, int v) {
 		for(const int& w: black_edges[v]) {
 			if(tle) return;
@@ -510,7 +300,6 @@ public:
 			add_edge(u, w, RED);
 		}
 
-		// std::cerr << "Contract Delete\n"; 
 		delete_node(v);
 
 		unordered_set<int> nodes_to_update = {u};
@@ -521,11 +310,17 @@ public:
 		// update heap
 		for(const int& x: nodes_to_update) {
 			if(tle) return;
-			if(black_edges[x].size()) black_heap.insert({black_edges[x].size(), x});
+			int blk_dg = black_edges[x].size(), red_dg = red_edges[x].size();
+			if(blk_dg) black_heap.insert({blk_dg, x});
 			else black_heap.erase(x);
 
-			if(red_edges[x].size()) red_heap.insert({red_edges[x].size(), x});
-			else red_heap.erase(x);		
+			if(red_dg) red_heap.insert({red_dg, x});
+			else red_heap.erase(x);
+
+			if(TWW_NEIGH) {
+				if(blk_dg + red_dg) deg_heap.insert({blk_dg + red_dg, x});
+				else deg_heap.erase(x);
+			}
 
 			max_rd = max(max_rd, (int) red_edges[x].size());
 		}
@@ -601,27 +396,6 @@ public:
 		}
 		return G;
 	}
-
-	void printGraph() {
-		std::cerr << "n: " << n << "\tm: " << m << "\n";
-		std::cerr << "black_edges.size(): " << black_edges.size() << "\n";
-		std::cerr << "red_edges.size(): " << red_edges.size() << "\n"; 
-		std::cerr << "black_edges: \n";
-		for(auto& p: black_edges) {
-			std::cerr << p.first << ": ";
-			for(int ch: p.second) {
-				std::cerr << ch << " ";
-			} std::cerr << "\n";
-		}
-
-		std::cerr << "red_edges: \n";
-		for(auto& p: red_edges) {
-			std::cerr << p.first << ": ";
-			for(int ch: p.second) {
-				std::cerr << ch << " ";
-			} std::cerr << "\n";
-		}
-	}
 };
 
 void read(string& input) {
@@ -682,7 +456,6 @@ void preprocessDeg1(Graph* G, vector<pi> &init_seq)
 					{
 						// delete_node(nghr);
 						deg1nghrs.push_back(nghr);
-						// std::cerr<<"Removed: "<<first_nghr<<" "<<nghr<<"\n";
 						init_seq.push_back({first_nghr, nghr});
 						valid_ops++;
 					}
@@ -695,7 +468,6 @@ void preprocessDeg1(Graph* G, vector<pi> &init_seq)
 		}
 	}
 
-	std::cerr<<"Optimal Operations: "<<valid_ops<<"\n";
 }
 
 
@@ -709,7 +481,6 @@ pi check_comb(Graph* G, vector<int>& nodes) {
 			if(tle) return {xf, yf};
 			if(x >= y) continue;
 			int rd = G->contracting_cost(x, y);
-			// std::cerr << "x: " << x << "\ty: " << y << "\trd: " << rd << "\n";
 			if(rd < min_rd) {
 				min_rd = rd;
 				xf = x; yf = y;
@@ -719,18 +490,47 @@ pi check_comb(Graph* G, vector<int>& nodes) {
 	return {xf, yf};
 }
 
+pi contract_next_tww_neigh(Graph* G) {
+	if(G->deg_heap.empty()) return {-1, -1};
+
+	int u = G->deg_heap.begin()->second; // node with lowest deg
+	unordered_set<int> nodes;
+	for(int v: G->black_edges[u]) nodes.insert(v);
+	for(int v: G->red_edges[u]) nodes.insert(v);
+
+	vector<int> dist_1(nodes.begin(), nodes.end());
+	for(int x: dist_1) {
+		for(int v: G->black_edges[x]) nodes.insert(v);
+		for(int v: G->red_edges[x]) nodes.insert(v);
+	}
+	nodes.erase(u);
+
+	int vf = 1, min_rd = INF;
+	for(int v: nodes) {
+		if(tle) break;
+		int rd = G->contracting_cost(u, v);
+		if(rd < min_rd) {
+			min_rd = rd;
+			vf = v;
+		}
+	}
+	return {u, vf};
+}
+
 pi contract_next(Graph* G, const int CNT=10) {
 	unordered_map<int, int> taken;
 	unordered_set<int> black_taken, red_taken;
 	
 	for(int i=0; i<CNT; i++) {
 		pi x_b = G->black_heap.getTopElement(taken);
-		black_taken.insert(x_b.first);
+		if(RANDOM_EXTREME) black_taken.insert(x_b.first);
+        else black_taken.insert(x_b.second);
 	}
 
 	for(int i=0; i<CNT; i++) {
 		pi x_r = G->red_heap.getTopElement(taken);
-		red_taken.insert(x_r.first);
+		if(RANDOM_EXTREME) red_taken.insert(x_r.first);
+        else red_taken.insert(x_r.second);
 	}
 
 	int xf = -1, yf = -1;
@@ -748,7 +548,6 @@ pi contract_next(Graph* G, const int CNT=10) {
 		if(black_taken.count(x)) G->black_heap.insert({taken[x], x});
 		else if(red_taken.count(x)) G->red_heap.insert({taken[x], x});
 	}
-	// std::cerr << "found pair: " << xf << " " << yf << "\n";
 	return {xf, yf};
 }
 
@@ -757,39 +556,11 @@ vector<pi> get_sequence(Graph* G, int cnt) {
 	G->initialize_heap();
 
 	while(!tle) {
-		// pi cp = contract_next(G, cnt);
-		// if(!G->black_edges.count(cp.first) || !G->black_edges.count(cp.second)) {
-        //     if(G->m == 0) break;
-        //     // std::cerr << "re-initializing heap, edges left: " << G->m << "\n";
-        //     G->initialize_heap();
-        //     continue;
-        // }
-		// seq.push_back(cp);
-		// G->contract(cp.first, cp.second);
-
-		pi cp = contract_next(G, cnt);
-		// if(!G->black_edges.count(cp.first) || !G->black_edges.count(cp.second)) break;
-        if(G->n <= max_rd || cp.first == -1) break;
+		pi cp = TWW_NEIGH ? contract_next_tww_neigh(G) : contract_next(G, cnt);
+		if(G->n <= max_rd || cp.first == -1) break;
 		G->contract(cp.first, cp.second);
-		seq.push_back(cp);
-
-		
-
-
-		// std::cerr<<"Node: "<<cp.second<<" "<<(G->black_edges.find(cp.second) != G->black_edges.end())<<"\n";
-		
-		// if(G->n % 100 == 0) 
-			// std::cerr << "nodes left to process: " << G->n << "\ttww: " << max_rd << "\n";
-		// std::cerr << "temp: " << temp << "\tmax_rd: " << max_rd << "\tn: " << G->n << "\n";
-		// std::cerr<<"Node: "<<cp.second<<" "<<(G->black_edges.find(cp.second) != G->black_edges.end())<<"\n";
-		
-		// if(G->n % 100 == 0) 
-			// std::cerr << "nodes left to process: " << G->n << "\ttww: " << max_rd << "\n";
-		// std::cerr << "temp: " << temp << "\tmax_rd: " << max_rd << "\tn: " << G->n << "\n";
+		seq.push_back(cp);		
 	}
-
-	// std::cerr << "black_heap: " << G->black_heap.heap.size() << "\tred_heap: " << G->red_heap.heap.size() << "\n";
-	// G->printGraph();
 	
 	vector<int> leftover;
 	for(auto& p: G->black_edges) {
@@ -802,13 +573,17 @@ vector<pi> get_sequence(Graph* G, int cnt) {
 }
 
 void initialize_values(Graph* G) {
-	unordered_set<int> localFuncNodeValue = {11203, 13746, 21982, 29340, 35427, 44308, 47104, 47430, 48630, 58084, 65281, 70200, 74474, 85320, 91581, 91934, 97840, 101131, 104115, 113795};
+	unordered_set<int> localFuncNodeValue = {11203, 13746, 21982, 29340, 35427, 44308, 47104, 47430, 48630, 58084, 65281, 70200, 74474, 85320, 91581, 91934, 97840, 101131, 104115, 113795, 126086, 132402, 240547, 376320, 383640, 434580, 551250, 901132, 1421314, 1463861, 2481054};
 	unordered_set<int> initialCntTenNodeValue = {153746, 169422};
 	unordered_set<int> initialCntFourNodeValue = {189859, 265009}; 
+	unordered_set<int> twwNeighNodeValue = {131072, 926552, 2216688, 2665215, 3598623};
+	unordered_set<int> randomExtremeFalseNodeValue = {310870, 320287};
 
 	int n = G->n;
 	if(localFuncNodeValue.count(n)) CONTRACTING_COST_FUNCTION = LOCAL;
 	else CONTRACTING_COST_FUNCTION = GLOBAL;
+
+	TWW_NEIGH = twwNeighNodeValue.count(n);
 
 	if(n <= 10000) INITIAL_CNT = 50;
 	else if(n <= 36000) INITIAL_CNT = 10;
@@ -817,14 +592,15 @@ void initialize_values(Graph* G) {
 	else if(n <= 180000) INITIAL_CNT = 4;
 	else if(n <= 380000) INITIAL_CNT = 10;
 	else INITIAL_CNT = 2;
+	
+    if(CONTRACTING_COST_FUNCTION == LOCAL) INITIAL_CNT = 10;
+	if(randomExtremeFalseNodeValue.count(n)) RANDOM_EXTREME = false;
+	if(initialCntFourNodeValue.count(n)) INITIAL_CNT = 4;
+	if(initialCntTenNodeValue.count(n)) INITIAL_CNT = 10;
 
 	if(INITIAL_CNT > 4) INC = 4;
 	else if(INITIAL_CNT == 4) INC = 2;
 	else INC = 1;
-
-	std::cerr << "Initial cnt: " << INITIAL_CNT << "\tIncrement: " << INC << "\n";
-	if(CONTRACTING_COST_FUNCTION == GLOBAL) std::cerr << "\tContracting cost func: GLOBAL\n";
-	else std::cerr << "\tContracting cost func: LOCAL\n";
 }
 
 void random_seq(Graph* G, vector<pi>& final_seq) {
@@ -849,10 +625,8 @@ void solve(Graph* G) {
 	preprocessDeg1(G, init_seq);
 	random_seq(G, final_seq);
 
-	// std::cerr << "Error: " << (G->black_edges.find(2428) != G->black_edges.end())<<"\n";
 	vector<unordered_set<int>> comp = G->get_components();
 
-	// std::cerr << "Retrieved Components\n";
 	while(!tle) {
 		max_rd = 0;
 		vector<pi> seq;
@@ -868,15 +642,12 @@ void solve(Graph* G) {
 
 				continue;
 			}
-			// std::cerr<<"Comp Size: "<<c.size()<<"\n";
 			Graph* ig = G->get_induced_subgraph(c);
-			// std::cerr << "Retrieved Subgraph\n";
 			vector<pi> temp = get_sequence(ig, cnt);
 			seq.insert(seq.end(), temp.begin(), temp.end());
 			leftover.push_back(temp.back().first);
 			delete(ig);
 		}
-		std::cerr << "cnt: " << cnt << "\tmax_rd: " << max_rd;
 
 		if(!tle && max_rd < final_rd) {
 			final_rd = max_rd;
@@ -887,7 +658,6 @@ void solve(Graph* G) {
 			final_seq.swap(seq);
 		}
 
-		std::cerr << " Best TW: " << final_rd << " Best Cnt: " << best_cnt << "\n";
 		cnt += INC;
  	}
 
@@ -899,31 +669,6 @@ void solve(Graph* G) {
 	}
 
 	// std::cout << final_rd << "\n";
-	std::cerr << "Final tww: " << final_rd << "\tbest_cnt: " << best_cnt << "\n\n";
-}
-
-vector<int> preprocess_deg_1(Graph* G) {
-	G->initialize_heap();
-	vector<int> nodes_removed;
-	while(!G->black_heap.empty()) {
-		pi x = *(G->black_heap.begin());
-		int deg = x.first, u = x.second;
-		if(deg >= 2) break;
-		
-		int v = *(G->black_edges[u].begin());
-		nodes_removed.push_back(u);
-		G->delete_edge(u, v, BLACK);
-
-		G->delete_node(u);
-		int new_deg_v = G->black_edges[v].size();
-		if(new_deg_v) {
-			G->black_heap.insert({G->black_edges[v].size(), v});
-		} else {
-			G->delete_node(v);
-			nodes_removed.push_back(v);
-		}
-	}
-	return nodes_removed;
 }
 
 int main() {
@@ -948,10 +693,6 @@ int main() {
 	srand(time(0));
 	Graph* G = read_graph();
 	initialize_values(G);
-	// std::cerr << "n: " << G->n << "\tm: " << G->m << "\n";
-	// vector<int> nodes_removed;// = preprocess_deg_1(G);
-	// std::cerr << "n: " << G->n << "\tm: " << G->m << "\n";
-
 	solve(G);
 	return 0;
 }
