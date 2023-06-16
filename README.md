@@ -1,4 +1,6 @@
-# HATTER: Hybrid Aprroach for Twinwidth by Taming Red (PACE 2023)
+# HATTER: Hybrid Approach to Twinwidth by Taming Red (PACE 2023)
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8045969.svg)](https://doi.org/10.5281/zenodo.8045969)
 
 This repository contains a **heuristic solution** to the Twinwidth problem.
 
